@@ -1,0 +1,86 @@
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 192.168.0.0/16
+
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for the Application Load Balancer
+      VpcId: vpc-0701ae5e25704071d
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: MyLoadBalancer
+      Scheme: internet-facing
+      Subnets:
+        - subnet-080eafeb5c0681066
+        - subnet-012961caba9052c80
+      SecurityGroups:
+        - !Ref LoadBalancerSecurityGroup
+      Type: application
+      IpAddressType: ipv4
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: MyTargetGroup
+      Protocol: HTTP
+      Port: 80
+      TargetType: instance
+      VpcId: vpc-0701ae5e25704071d
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  MySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for EC2 instances
+      VpcId: vpc-0701ae5e25704071d
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+
+  MyLaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: ami-021c9828bb8bb9dee
+      InstanceType: t2.micro
+      SecurityGroups:
+        - !Ref MySecurityGroup
+
+  MyAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchConfigurationName: !Ref MyLaunchConfiguration
+      MinSize: 1
+      MaxSize: 3
+      DesiredCapacity: 2
+      VPCZoneIdentifier:
+        - subnet-09a1ddf5a6b99fc9c
+        - subnet-0d90996653ac4da42
+
+  MyDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for RDS
+      SubnetIds:
+        - subnet-09a1ddf5a6b99fc9c
+        - subnet-0d90996653ac4da42
